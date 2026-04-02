@@ -132,6 +132,9 @@ export function drawShop(ctx, totalCoins, playerSkills) {
   const itemH  = 72 * scale;
   const startY = H * 0.30;
 
+  // アイテム座標リスト（クリック判定用に収集）
+  const itemRects = [];
+
   items.forEach((item, i) => {
     const col  = i % 2;
     const row  = Math.floor(i / 2);
@@ -139,6 +142,10 @@ export function drawShop(ctx, totalCoins, playerSkills) {
     const iy   = startY + row * (itemH + 12 * scale);
     const canBuy = totalCoins >= item.cost && !item.maxed;
 
+    // 座標を記録
+    itemRects.push({ x: ix, y: iy, w: colW, h: itemH, idx: i });
+
+    // ホバー感（canBuyの場合は枠を明るく）
     ctx.fillStyle = canBuy ? 'rgba(0, 30, 60, 0.8)' : 'rgba(10, 10, 20, 0.6)';
     ctx.fillRect(ix, iy, colW, itemH);
     ctx.strokeStyle = canBuy ? '#2a6acc' : '#1a2a3a';
@@ -159,7 +166,7 @@ export function drawShop(ctx, totalCoins, playerSkills) {
     ctx.fillStyle = item.maxed ? '#2a4a2a' : (canBuy ? '#ffd700' : '#4a4a2a');
     ctx.fillText(item.maxed ? 'MAX' : `◉ ${item.cost}`, ix + colW - 12 * scale, iy + 22 * scale);
 
-    // インデックス番号キーガイド
+    // キーガイド（PC向け）
     ctx.textAlign = 'right';
     ctx.font      = `${Math.round(11 * scale)}px 'Courier New', monospace`;
     ctx.fillStyle = '#2a4a6a';
@@ -193,8 +200,8 @@ export function drawShop(ctx, totalCoins, playerSkills) {
 
   ctx.restore();
 
-  // ボタン領域を返す（クリック判定用）
-  return { items, playAgainBtn: { x: btnX, y: btnY, w: btnW, h: btnH } };
+  // 全ヒット領域を返す（クリック・タップ判定用）
+  return { items, itemRects, playAgainBtn: { x: btnX, y: btnY, w: btnW, h: btnH } };
 }
 
 export function getShopItems(skills) {

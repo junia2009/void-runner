@@ -17,7 +17,8 @@ import {
 } from './storage.js';
 import { drawTitle, drawGameOver, drawShop, getShopItems } from './screens.js';
 
-let shopPlayAgainBtn = null; // ショップのPLAY AGAINボタン領域
+let shopPlayAgainBtn  = null; // ショップのPLAY AGAINボタン領域
+let shopItemRects     = [];   // ショップアイテムのヒット領域
 
 // ===== Canvas セットアップ =====
 const canvas = document.getElementById('gameCanvas');
@@ -171,20 +172,29 @@ function handleCanvasClick(e) {
   }
 
   if (gameState === STATE.SHOP) {
-    // PLAY AGAIN ボタン領域のクリック判定
-    if (!shopPlayAgainBtn) return;
     const rect   = canvas.getBoundingClientRect();
     const clickX = (e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0) - rect.left;
     const clickY = (e.clientY ?? e.changedTouches?.[0]?.clientY ?? 0) - rect.top;
-    // Canvas座標に変換
     const canvasX = (clickX / rect.width)  * GAME_WIDTH;
     const canvasY = (clickY / rect.height) * GAME_HEIGHT;
-    const btn = shopPlayAgainBtn;
-    if (canvasX >= btn.x && canvasX <= btn.x + btn.w &&
-        canvasY >= btn.y && canvasY <= btn.y + btn.h) {
-      gameState = STATE.TITLE;
-      // タッチデバイスならボタン再表示
-      if (isTouchDevice()) touchControls.classList.add('visible');
+
+    // ── アイテム購入判定 ──
+    for (const rect of shopItemRects) {
+      if (canvasX >= rect.x && canvasX <= rect.x + rect.w &&
+          canvasY >= rect.y && canvasY <= rect.y + rect.h) {
+        tryBuyShopItem(rect.idx);
+        return;
+      }
+    }
+
+    // ── PLAY AGAIN ボタン判定 ──
+    if (shopPlayAgainBtn) {
+      const btn = shopPlayAgainBtn;
+      if (canvasX >= btn.x && canvasX <= btn.x + btn.w &&
+          canvasY >= btn.y && canvasY <= btn.y + btn.h) {
+        gameState = STATE.TITLE;
+        if (isTouchDevice()) touchControls.classList.add('visible');
+      }
     }
     return;
   }
@@ -203,33 +213,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// ショップタッチ（ボタン選択）
-canvas.addEventListener('touchend', (e) => {
-  if (gameState !== STATE.SHOP) return;
-  const touch = e.changedTouches[0];
-  const rect  = canvas.getBoundingClientRect();
-  const tx    = (touch.clientX - rect.left) / rect.width  * GAME_WIDTH;
-  const ty    = (touch.clientY - rect.top)  / rect.height * GAME_HEIGHT;
-  identifyShopTouch(tx, ty);
-}, { passive: true });
-
-function identifyShopTouch(tx, ty) {
-  const scale  = Math.min(1, GAME_WIDTH / 1280);
-  const colW   = GAME_WIDTH * 0.42;
-  const startX = GAME_WIDTH / 2 - colW;
-  const itemH  = 72 * scale;
-  const startY = GAME_HEIGHT * 0.30;
-
-  shopItems.forEach((item, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const ix  = startX + col * (colW + GAME_WIDTH * 0.04);
-    const iy  = startY + row * (itemH + 12 * scale);
-    if (tx >= ix && tx <= ix + colW && ty >= iy && ty <= iy + itemH) {
-      tryBuyShopItem(i);
-    }
-  });
-}
+// タッチはhandleCanvasClickに統合済みのため個別リスナー不要
 
 function tryBuyShopItem(idx) {
   const item = shopItems[idx];
@@ -412,7 +396,10 @@ function loop(timestamp) {
   } else if (gameState === STATE.SHOP) {
     particles.draw(ctx, 1, 1);
     const shopResult = drawShop(ctx, totalCoins, player.skills);
-    if (shopResult) shopPlayAgainBtn = shopResult.playAgainBtn;
+    if (shopResult) {
+      shopPlayAgainBtn = shopResult.playAgainBtn;
+      shopItemRects    = shopResult.itemRects;
+    }
   }
 
   requestAnimationFrame(loop);
