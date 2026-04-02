@@ -15,8 +15,8 @@ export const PLAYER = {
   DOUBLE_JUMP_FORCE: -12,
   MAX_HP: 100,
   ATTACK_DAMAGE: 25,
-  ATTACK_RANGE_W: 70,
-  ATTACK_RANGE_H: 50,
+  ATTACK_RANGE_W: 160,  // 攻撃リーチを大幅拡大
+  ATTACK_RANGE_H: 100,  // 上下方向も広く
   ATTACK_COOLDOWN: 300, // ms
   INVINCIBLE_TIME: 1000, // ms（被弾後の無敵時間）
 };

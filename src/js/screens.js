@@ -166,14 +166,35 @@ export function drawShop(ctx, totalCoins, playerSkills) {
     ctx.fillText(`[${i + 1}]`, ix + colW - 12 * scale, iy + 40 * scale);
   });
 
+  // ===== PLAY AGAIN ボタン =====
+  const btnW = 260 * scale;
+  const btnH = 44  * scale;
+  const btnX = W / 2 - btnW / 2;
+  const btnY = H * 0.88;
+  ctx.fillStyle   = 'rgba(0, 80, 160, 0.8)';
+  ctx.strokeStyle = '#7ecfff';
+  ctx.lineWidth   = 2;
+  ctx.shadowBlur  = 12;
+  ctx.shadowColor = '#7ecfff';
+  ctx.beginPath();
+  ctx.roundRect(btnX, btnY, btnW, btnH, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowBlur  = 0;
+
+  ctx.font      = `bold ${Math.round(16 * scale)}px 'Courier New', monospace`;
+  ctx.fillStyle = '#c8e8ff';
   ctx.textAlign = 'center';
-  ctx.font      = `${Math.round(12 * scale)}px 'Courier New', monospace`;
+  ctx.fillText('▶  PLAY AGAIN', W / 2, btnY + btnH * 0.65);
+
+  ctx.font      = `${Math.round(11 * scale)}px 'Courier New', monospace`;
   ctx.fillStyle = '#2a4a6a';
-  ctx.fillText('Press 1-6 to buy  /  ESC or TAP outside to close', W / 2, H * 0.90);
+  ctx.fillText('Press 1-6 to buy  /  ESC to close', W / 2, H * 0.97);
 
   ctx.restore();
 
-  return items;
+  // ボタン領域を返す（クリック判定用）
+  return { items, playAgainBtn: { x: btnX, y: btnY, w: btnW, h: btnH } };
 }
 
 export function getShopItems(skills) {

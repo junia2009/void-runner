@@ -199,12 +199,12 @@ export class EnemyManager {
   constructor(particles) {
     this.particles = particles;
     this.enemies   = [];
-    this._timer    = 2000;
+    this._timer    = 600; // 最初から早めにスポーン
   }
 
   reset() {
     this.enemies = [];
-    this._timer  = 2000;
+    this._timer  = 600;
   }
 
   update(dt, scrollSpeed, distance, player) {
@@ -212,15 +212,19 @@ export class EnemyManager {
     this._timer -= dt;
     if (this._timer <= 0) {
       const difficulty = Math.min(1, distance / 4000);
-      const types = ['crawler'];
-      if (difficulty > 0.25) types.push('floater');
-      if (difficulty > 0.6)  types.push('tank');
+      const types = ['crawler', 'crawler']; // crawlerを2倍の確率で
+      if (difficulty > 0.2) types.push('floater');
+      if (difficulty > 0.5) types.push('tank');
 
-      const type  = types[randInt(0, types.length - 1)];
-      const groundY = GROUND_Y - (type === 'floater' ? 160 + Math.random() * 120 : 0);
-      this.enemies.push(new Enemy(GAME_WIDTH + 30, groundY, type));
+      // 1〜2体同時スポーン（難易度が上がると確率増加）
+      const spawnCount = (difficulty > 0.4 && Math.random() < 0.35) ? 2 : 1;
+      for (let s = 0; s < spawnCount; s++) {
+        const type  = types[randInt(0, types.length - 1)];
+        const groundY = GROUND_Y - (type === 'floater' ? 160 + Math.random() * 120 : 0);
+        this.enemies.push(new Enemy(GAME_WIDTH + 30 + s * 120, groundY, type));
+      }
 
-      this._timer = randInt(1800, 4000) * (1 - difficulty * 0.45);
+      this._timer = randInt(700, 1800) * (1 - difficulty * 0.4); // 間隔を大幅短縮
     }
 
     // 更新・衝突

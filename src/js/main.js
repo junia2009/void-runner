@@ -17,6 +17,8 @@ import {
 } from './storage.js';
 import { drawTitle, drawGameOver, drawShop, getShopItems } from './screens.js';
 
+let shopPlayAgainBtn = null; // ショップのPLAY AGAINボタン領域
+
 // ===== Canvas セットアップ =====
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
@@ -114,6 +116,8 @@ function initGame() {
   kills   = 0;
   score   = 0;
   world.score = 0;
+  // タッチデバイスならボタンを表示
+  if (isTouchDevice()) touchControls.classList.add('visible');
   hud.notify('GO !', '#00ffcc');
 }
 
@@ -152,25 +156,35 @@ canvas.addEventListener('click', handleCanvasClick);
 canvas.addEventListener('touchend', handleCanvasClick, { passive: true });
 
 function handleCanvasClick(e) {
-  if (gameState === STATE.TITLE || gameState === STATE.GAMEOVER) {
-    if (gameState === STATE.TITLE) {
-      gameState = STATE.PLAYING;
-      initGame();
-    } else {
-      gameState = STATE.SHOP;
-      shopItems = getShopItems(player.skills);
-    }
+  if (gameState === STATE.TITLE) {
+    gameState = STATE.PLAYING;
+    initGame();
+    return;
+  }
+
+  if (gameState === STATE.GAMEOVER) {
+    gameState = STATE.SHOP;
+    shopItems = getShopItems(player.skills);
+    // ショップ中はタッチボタンを非表示
+    touchControls.classList.remove('visible');
     return;
   }
 
   if (gameState === STATE.SHOP) {
-    // Canvasクリックでショップを閉じる（ボタン外）
-    const rect = canvas.getBoundingClientRect();
-    const cx   = (e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0) - rect.left;
-    const cy   = (e.clientY ?? e.changedTouches?.[0]?.clientY ?? 0) - rect.top;
-    // 簡易：画面下25%をタップ → 閉じる
-    if (cy / rect.height > 0.8) {
+    // PLAY AGAIN ボタン領域のクリック判定
+    if (!shopPlayAgainBtn) return;
+    const rect   = canvas.getBoundingClientRect();
+    const clickX = (e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0) - rect.left;
+    const clickY = (e.clientY ?? e.changedTouches?.[0]?.clientY ?? 0) - rect.top;
+    // Canvas座標に変換
+    const canvasX = (clickX / rect.width)  * GAME_WIDTH;
+    const canvasY = (clickY / rect.height) * GAME_HEIGHT;
+    const btn = shopPlayAgainBtn;
+    if (canvasX >= btn.x && canvasX <= btn.x + btn.w &&
+        canvasY >= btn.y && canvasY <= btn.y + btn.h) {
       gameState = STATE.TITLE;
+      // タッチデバイスならボタン再表示
+      if (isTouchDevice()) touchControls.classList.add('visible');
     }
     return;
   }
@@ -185,6 +199,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') {
     gameState = STATE.TITLE;
+    if (isTouchDevice()) touchControls.classList.add('visible');
   }
 });
 
@@ -364,6 +379,8 @@ function loop(timestamp) {
   } else if (gameState === STATE.SHOP) {
     bg.update(1);
     particles.update();
+    // ショップ中はタッチボタンを非表示
+    touchControls.classList.remove('visible');
   }
 
   // ===== DRAW =====
@@ -394,7 +411,8 @@ function loop(timestamp) {
 
   } else if (gameState === STATE.SHOP) {
     particles.draw(ctx, 1, 1);
-    drawShop(ctx, totalCoins, player.skills);
+    const shopResult = drawShop(ctx, totalCoins, player.skills);
+    if (shopResult) shopPlayAgainBtn = shopResult.playAgainBtn;
   }
 
   requestAnimationFrame(loop);

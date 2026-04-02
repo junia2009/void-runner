@@ -86,7 +86,7 @@ export class Player {
     if (this.attackCooldown > 0 || this.isDashing) return false;
     this.attackCooldown = PLAYER.ATTACK_COOLDOWN;
     this.attackActive   = true;
-    this.attackTimer    = 180; // ms
+    this.attackTimer    = 280; // ms（判定ウィンドウを延長）
     this.slashAngle     = 0;
     this.slashAlpha     = 1;
     this.state          = STATE.ATTACK;
@@ -108,10 +108,10 @@ export class Player {
   getAttackHitbox() {
     if (!this.attackActive) return null;
     return {
-      x: this.x + this.w,
-      y: this.y + this.h * 0.1,
-      w: PLAYER.ATTACK_RANGE_W,
-      h: PLAYER.ATTACK_RANGE_H,
+      x: this.x - PLAYER.ATTACK_RANGE_W * 0.1,  // プレイヤー中心から前方へ広く
+      y: this.y - PLAYER.ATTACK_RANGE_H * 0.2,  // 上下にも余裕を持たせる
+      w: this.w + PLAYER.ATTACK_RANGE_W,
+      h: this.h + PLAYER.ATTACK_RANGE_H * 0.4,
     };
   }
 
