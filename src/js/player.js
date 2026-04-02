@@ -187,10 +187,10 @@ export class Player {
       this.particles.emitFootDust(this.x + this.w * 0.2, this.y + this.h);
     }
 
-    // 斬撃エフェクト
+    // 斬撃エフェクト（slashAngle: 0→3.0 でスウィープ進行、slashAlpha: 1→0 で輝度）
     if (this.slashAlpha > 0) {
-      this.slashAngle += 0.18;
-      this.slashAlpha -= 0.06;
+      this.slashAngle += 0.20;
+      this.slashAlpha -= 0.055;
       if (this.slashAlpha < 0) this.slashAlpha = 0;
     }
   }
@@ -315,64 +315,139 @@ export class Player {
   _drawSlash(ctx) {
     if (this.slashAlpha <= 0) return;
     ctx.save();
-    ctx.lineCap = 'round';
+    ctx.lineCap  = 'round';
+    ctx.lineJoin = 'round';
 
-    // ヒットボックスと完全に同じ座標
+    const alpha = this.slashAlpha;                        // 1 → 0（輝度）
+    const t     = Math.min(this.slashAngle / 2.9, 1.0);  // 0 → 1（スウィープ進行）
+
+    // ヒットボックスと同じ座標
     const hbX = this.x - PLAYER.ATTACK_RANGE_W * 0.1;
     const hbY = this.y - PLAYER.ATTACK_RANGE_H * 0.2;
     const hbW = this.w + PLAYER.ATTACK_RANGE_W;
     const hbH = this.h + PLAYER.ATTACK_RANGE_H * 0.4;
-    const a   = this.slashAlpha;
 
-    // ① 攻撃エリア全体の薄いグロー
-    ctx.globalAlpha = a * 0.18;
-    const areaGrad = ctx.createLinearGradient(hbX, 0, hbX + hbW, 0);
-    areaGrad.addColorStop(0,   'rgba(126, 207, 255, 0.9)');
-    areaGrad.addColorStop(0.7, 'rgba(126, 207, 255, 0.3)');
-    areaGrad.addColorStop(1,   'rgba(126, 207, 255, 0.0)');
-    ctx.fillStyle = areaGrad;
-    ctx.fillRect(hbX, hbY, hbW, hbH);
+    // 剣の振り始め位置（プレイヤー右肩あたり）
+    const originX = this.x + this.w * 0.75;
+    const originY = this.y + this.h * 0.28;
 
-    ctx.globalAlpha = a;
-    ctx.shadowBlur  = 22;
+    // ── ① 扇形スウィープ弧（上→下へ円弧がアニメーションする） ──
+    const R1      = hbW * 0.80;           // 外弧の半径
+    const R2      = hbW * 0.62;           // 内弧
+    const startA  = -Math.PI * 0.58;      // -104°（振り始め）
+    const endA    =  Math.PI * 0.46;      //  +83°（振り切り）
+    const curA    = startA + (endA - startA) * t;
+
+    // 外側メイン弧（白）
+    ctx.globalAlpha = alpha;
+    ctx.shadowBlur  = 30;
+    ctx.shadowColor = '#ffffff';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth   = 4;
+    ctx.beginPath();
+    ctx.arc(originX, originY, R1, startA, curA);
+    ctx.stroke();
+
+    // 内側サブ弧（シアン）
+    ctx.strokeStyle = '#7ecfff';
+    ctx.lineWidth   = 2;
     ctx.shadowColor = '#7ecfff';
+    ctx.globalAlpha = alpha * 0.75;
+    ctx.beginPath();
+    ctx.arc(originX, originY, R2, startA + 0.08, curA + 0.08);
+    ctx.stroke();
 
-    // ② メイン斬撃ライン3本（ヒットボックスを斜めに横断）
-    const lines = [
-      { x0: hbX + hbW * 0.05, y0: hbY,              x1: hbX + hbW * 0.96, y1: hbY + hbH * 0.40, color: '#ffffff', lw: 3.5 },
-      { x0: hbX + hbW * 0.05, y0: hbY + hbH * 0.28, x1: hbX + hbW * 0.96, y1: hbY + hbH * 0.72, color: '#aaddff', lw: 2.5 },
-      { x0: hbX + hbW * 0.05, y0: hbY + hbH * 0.58, x1: hbX + hbW * 0.96, y1: hbY + hbH,        color: '#7ecfff', lw: 2.0 },
-    ];
-    for (const l of lines) {
-      ctx.strokeStyle = l.color;
-      ctx.lineWidth   = l.lw * a;
+    // 残像弧（少し位相遅れ・薄め）
+    if (t > 0.12) {
+      ctx.strokeStyle = 'rgba(126,207,255,0.35)';
+      ctx.lineWidth   = 2.5;
+      ctx.globalAlpha = alpha * 0.4;
+      ctx.shadowBlur  = 8;
       ctx.beginPath();
-      ctx.moveTo(l.x0, l.y0);
-      ctx.lineTo(l.x1, l.y1);
+      ctx.arc(originX, originY, R1 * 1.10, startA, curA - 0.28);
       ctx.stroke();
     }
 
-    // ③ 先端の衝撃波リング（ヒットボックス右端）
-    ctx.shadowBlur  = 30;
-    ctx.shadowColor = '#7ecfff';
-    ctx.strokeStyle = `rgba(126, 207, 255, ${a})`;
-    ctx.lineWidth   = 2.5;
+    // ── ② 弧の先端を追う発光球 ──
+    const tipX = originX + Math.cos(curA) * R1;
+    const tipY = originY + Math.sin(curA) * R1;
+    ctx.globalAlpha = alpha;
+    ctx.shadowBlur  = 40;
+    ctx.shadowColor = '#ffffff';
+    ctx.fillStyle   = '#ffffff';
     ctx.beginPath();
-    ctx.ellipse(
-      hbX + hbW * 0.92, hbY + hbH * 0.5,
-      hbW * 0.06, hbH * 0.44 * a,
-      0, -Math.PI * 0.5, Math.PI * 0.5
-    );
+    ctx.arc(tipX, tipY, 7 * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    // 後光リング
+    ctx.shadowBlur  = 20;
+    ctx.strokeStyle = '#7ecfff';
+    ctx.lineWidth   = 1.5;
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.beginPath();
+    ctx.arc(tipX, tipY, 13 * alpha, 0, Math.PI * 2);
     ctx.stroke();
 
-    // ④ プレイヤー根元の発光点（剣を振った起点）
-    ctx.shadowBlur  = 20;
-    ctx.shadowColor = '#ffffff';
-    ctx.fillStyle   = `rgba(255, 255, 255, ${a * 0.9})`;
-    ctx.beginPath();
-    ctx.arc(this.x + this.w * 0.8, this.y + this.h * 0.35, 6 * a, 0, Math.PI * 2);
-    ctx.fill();
+    // ── ③ 衝撃波（中盤以降に右へ飛ぶ三角波） ──
+    if (t > 0.40) {
+      const wt    = (t - 0.40) / 0.60;          // 0→1
+      const wx    = originX + hbW * wt * 0.88;
+      const halfH = hbH * 0.42 * (1 - wt * 0.35);
+      const wA    = alpha * (1 - wt * 0.45);
+      ctx.globalAlpha = wA;
+      ctx.shadowBlur  = 18;
+      ctx.shadowColor = '#7ecfff';
+      ctx.strokeStyle = '#c8f0ff';
+      ctx.lineWidth   = 2.8;
+      ctx.beginPath();
+      ctx.moveTo(wx - 8,  tipY - halfH);
+      ctx.quadraticCurveTo(wx + 18, tipY, wx - 8, tipY + halfH);
+      ctx.stroke();
+      // 二重衝撃波
+      ctx.strokeStyle = 'rgba(126,207,255,0.4)';
+      ctx.lineWidth   = 1.5;
+      const wx2   = originX + hbW * Math.min(wt + 0.12, 1) * 0.88;
+      const halfH2 = halfH * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(wx2 - 6,  tipY - halfH2);
+      ctx.quadraticCurveTo(wx2 + 12, tipY, wx2 - 6, tipY + halfH2);
+      ctx.stroke();
+    }
 
+    // ── ④ 速度線（tの進行に合わせて伸びる） ──
+    const speedLines = [
+      { yRatio: 0.15, lenRatio: 0.58, lw: 2.0, color: '#ffffff' },
+      { yRatio: 0.38, lenRatio: 0.80, lw: 2.5, color: '#ffffff' },
+      { yRatio: 0.60, lenRatio: 0.70, lw: 1.8, color: '#aaddff' },
+      { yRatio: 0.82, lenRatio: 0.48, lw: 1.2, color: '#7ecfff' },
+    ];
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#7ecfff';
+    for (const sl of speedLines) {
+      const ly      = hbY + hbH * sl.yRatio;
+      const lineEnd = hbX + hbW * sl.lenRatio * t;
+      ctx.globalAlpha = alpha * 0.55;
+      ctx.strokeStyle = sl.color;
+      ctx.lineWidth   = sl.lw;
+      ctx.beginPath();
+      ctx.moveTo(hbX + 4, ly);
+      ctx.lineTo(lineEnd,  ly);
+      ctx.stroke();
+    }
+
+    // ── ⑤ 斬り始めの根本フラッシュ ──
+    if (t < 0.35) {
+      const ft = 1 - t / 0.35;
+      ctx.globalAlpha = alpha * ft * 0.85;
+      ctx.shadowBlur  = 25;
+      ctx.shadowColor = '#ffffff';
+      ctx.fillStyle   = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(originX, originY, 10 * ft, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur  = 0;
     ctx.restore();
   }
 }
