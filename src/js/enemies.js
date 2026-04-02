@@ -33,6 +33,28 @@ class Enemy {
         this.w = 58; this.h = 50; this.hp = 4; this.maxHp = 4;
         this.speed = 1.2;
         break;
+
+      // ── 新空中敵 ──────────────────────────────────────
+      case 'wasp':
+        // ハチ型: 斜め突進。y座標が上下に波打ちながら高速接近
+        this.w = 38; this.h = 26; this.hp = 1; this.maxHp = 1;
+        this.speed = 4 + Math.random() * 2;
+        this.floatOffset = Math.random() * Math.PI * 2;
+        this.wingFlap = 0;
+        break;
+      case 'bomber':
+        // 爆撃機型: 上空を低速で横断しつつ爆弾を落とす
+        this.w = 60; this.h = 30; this.hp = 3; this.maxHp = 3;
+        this.speed = 0.8;
+        this.bombCooldown = 1200 + Math.random() * 800;
+        this.bombs = []; // 落下中の爆弾リスト
+        break;
+      case 'speeder':
+        // 高速機型: 一直線に猛スピードで突っ込む
+        this.w = 50; this.h = 20; this.hp = 1; this.maxHp = 1;
+        this.speed = 8 + Math.random() * 3;
+        this.trail = []; // 残像
+        break;
     }
   }
 
@@ -65,6 +87,37 @@ class Enemy {
       this.floatOffset += 0.03;
       this.y += Math.sin(this.floatOffset) * 0.8;
     }
+
+    if (this.type === 'wasp') {
+      // 上下に波打ちながら突進
+      this.floatOffset += 0.10;
+      this.y += Math.sin(this.floatOffset) * 2.8;
+      this.wingFlap = (this.wingFlap + 0.35) % (Math.PI * 2);
+    }
+
+    if (this.type === 'bomber') {
+      // 爆弾タイマー
+      this.bombCooldown -= dt;
+      if (this.bombCooldown <= 0) {
+        this.bombs.push({ x: this.x + this.w / 2, y: this.y + this.h, vy: 1, r: 6 });
+        this.bombCooldown = 1400 + Math.random() * 600;
+      }
+      // 爆弾の落下
+      for (let i = this.bombs.length - 1; i >= 0; i--) {
+        const b = this.bombs[i];
+        b.x  -= scrollSpeed;
+        b.vy += 0.25;
+        b.y  += b.vy;
+        if (b.y > GROUND_Y + 20) this.bombs.splice(i, 1);
+      }
+    }
+
+    if (this.type === 'speeder') {
+      // 残像を記録
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 6) this.trail.shift();
+      for (const t of this.trail) t.x -= scrollSpeed;
+    }
   }
 
   draw(ctx) {
@@ -82,6 +135,9 @@ class Enemy {
       case 'crawler': this._drawCrawler(ctx); break;
       case 'floater': this._drawFloater(ctx); break;
       case 'tank':    this._drawTank(ctx);    break;
+      case 'wasp':    this._drawWasp(ctx);    break;
+      case 'bomber':  this._drawBomber(ctx);  break;
+      case 'speeder': this._drawSpeeder(ctx); break;
     }
 
     // HPバー
@@ -193,6 +249,197 @@ class Enemy {
     ctx.fillStyle = '#f44';
     ctx.fillRect(bx, by, bw * (this.hp / this.maxHp), bh);
   }
+
+  // ── 新空中敵の描画 ────────────────────────────────────
+
+  _drawWasp(ctx) {
+    const { x, y, w, h } = this;
+    const cx = x + w / 2, cy = y + h / 2;
+    ctx.shadowBlur  = 14;
+    ctx.shadowColor = '#aaff00';
+
+    // 羽（上下にはためく）
+    const flapY = Math.sin(this.wingFlap) * 8;
+    ctx.fillStyle = 'rgba(180,255,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 10, cy - 10 + flapY, 18, 8, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 10, cy - 10 + flapY, 18, 8,  0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // 上翅
+    ctx.fillStyle = 'rgba(200,255,80,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 8, cy - 6 + flapY * 0.5, 14, 5, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 8, cy - 6 + flapY * 0.5, 14, 5,  0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 胴体（黄黒縞）
+    ctx.fillStyle = '#1a1a00';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w * 0.38, h * 0.44, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 縞模様
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(200,200,0,${0.5 - i * 0.12})`;
+      ctx.fillRect(x + w * 0.22 + i * 8, cy - h * 0.35, 5, h * 0.7);
+    }
+    // 目（赤い複眼）
+    ctx.fillStyle   = '#ff4400';
+    ctx.shadowColor = '#ff4400';
+    ctx.beginPath();
+    ctx.arc(cx + w * 0.28, cy - 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // 針
+    ctx.strokeStyle = '#ccff00';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, cy);
+    ctx.lineTo(x - 10, cy + 2);
+    ctx.stroke();
+  }
+
+  _drawBomber(ctx) {
+    const { x, y, w, h } = this;
+    const cx = x + w / 2, cy = y + h / 2;
+    ctx.shadowBlur  = 12;
+    ctx.shadowColor = '#ff6600';
+
+    // 爆弾の描画（先に）
+    for (const b of this.bombs) {
+      ctx.save();
+      ctx.shadowBlur  = 10;
+      ctx.shadowColor = '#ff4400';
+      ctx.fillStyle   = '#cc2200';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+      // 導火線
+      ctx.strokeStyle = '#ffaa00';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y - b.r);
+      ctx.quadraticCurveTo(b.x + 4, b.y - b.r - 5, b.x + 2, b.y - b.r - 9);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 機体
+    ctx.fillStyle = '#1a0a00';
+    ctx.beginPath();
+    ctx.moveTo(x,       cy);
+    ctx.lineTo(x + w,   cy - h * 0.25);
+    ctx.lineTo(x + w,   cy + h * 0.25);
+    ctx.closePath();
+    ctx.fill();
+    // 上面
+    ctx.fillStyle = '#2a1500';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.1, cy - h * 0.1);
+    ctx.lineTo(x + w * 0.9, cy - h * 0.28);
+    ctx.lineTo(x + w * 0.85, cy + h * 0.05);
+    ctx.lineTo(x + w * 0.1,  cy + h * 0.05);
+    ctx.closePath();
+    ctx.fill();
+    // 主翼
+    ctx.fillStyle = '#2a1500';
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy);
+    ctx.lineTo(cx - 5,  cy - h * 0.9);
+    ctx.lineTo(cx + 15, cy - h * 0.5);
+    ctx.lineTo(cx + 10, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy);
+    ctx.lineTo(cx - 5,  cy + h * 0.9);
+    ctx.lineTo(cx + 15, cy + h * 0.5);
+    ctx.lineTo(cx + 10, cy);
+    ctx.closePath();
+    ctx.fill();
+    // エンジン炎
+    ctx.fillStyle = '#ff6600';
+    ctx.shadowColor = '#ff6600';
+    ctx.beginPath();
+    ctx.moveTo(x, cy - h * 0.1);
+    ctx.lineTo(x - 10 - Math.random() * 8, cy);
+    ctx.lineTo(x, cy + h * 0.1);
+    ctx.closePath();
+    ctx.fill();
+    // コックピット
+    ctx.fillStyle   = '#7ecfff';
+    ctx.shadowColor = '#7ecfff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.78, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  _drawSpeeder(ctx) {
+    const { x, y, w, h } = this;
+    const cy = y + h / 2;
+
+    // 残像
+    this.trail.forEach((t, i) => {
+      const ta = (i / this.trail.length) * 0.4;
+      ctx.save();
+      ctx.globalAlpha = ta;
+      ctx.fillStyle   = '#ff00aa';
+      ctx.shadowBlur  = 6;
+      ctx.shadowColor = '#ff00aa';
+      ctx.beginPath();
+      ctx.moveTo(t.x + w, t.y + h / 2);
+      ctx.lineTo(t.x, t.y);
+      ctx.lineTo(t.x, t.y + h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    });
+
+    ctx.shadowBlur  = 18;
+    ctx.shadowColor = '#ff00aa';
+    // 本体（矢印型）
+    ctx.fillStyle = '#1a0015';
+    ctx.beginPath();
+    ctx.moveTo(x + w, cy);
+    ctx.lineTo(x + w * 0.3, y);
+    ctx.lineTo(x,     cy - h * 0.15);
+    ctx.lineTo(x + w * 0.15, cy);
+    ctx.lineTo(x,     cy + h * 0.15);
+    ctx.lineTo(x + w * 0.3, y + h);
+    ctx.closePath();
+    ctx.fill();
+    // 光のライン
+    ctx.strokeStyle = '#ff00aa';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.2, cy);
+    ctx.lineTo(x + w * 0.85, cy);
+    ctx.stroke();
+    // エンジン噴射
+    const jetLen = 15 + Math.random() * 10;
+    const jetGrad = ctx.createLinearGradient(x, 0, x - jetLen, 0);
+    jetGrad.addColorStop(0,   '#ff00aa');
+    jetGrad.addColorStop(1,   'rgba(255,0,170,0)');
+    ctx.strokeStyle = jetGrad;
+    ctx.lineWidth   = 4;
+    ctx.shadowColor = '#ff00aa';
+    ctx.beginPath();
+    ctx.moveTo(x, cy - h * 0.1);
+    ctx.lineTo(x - jetLen, cy - h * 0.1);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, cy + h * 0.1);
+    ctx.lineTo(x - jetLen, cy + h * 0.1);
+    ctx.stroke();
+    // 目（青い一つ目）
+    ctx.fillStyle   = '#00eeff';
+    ctx.shadowColor = '#00eeff';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.72, cy, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 export class EnemyManager {
@@ -212,19 +459,42 @@ export class EnemyManager {
     this._timer -= dt;
     if (this._timer <= 0) {
       const difficulty = Math.min(1, distance / 4000);
-      const types = ['crawler', 'crawler']; // crawlerを2倍の確率で
-      if (difficulty > 0.2) types.push('floater');
-      if (difficulty > 0.5) types.push('tank');
 
-      // 1〜2体同時スポーン（難易度が上がると確率増加）
-      const spawnCount = (difficulty > 0.4 && Math.random() < 0.35) ? 2 : 1;
-      for (let s = 0; s < spawnCount; s++) {
-        const type  = types[randInt(0, types.length - 1)];
-        const groundY = GROUND_Y - (type === 'floater' ? 160 + Math.random() * 120 : 0);
-        this.enemies.push(new Enemy(GAME_WIDTH + 30 + s * 120, groundY, type));
+      // 地上敵
+      const groundTypes = ['crawler', 'crawler'];
+      if (difficulty > 0.5) groundTypes.push('tank');
+
+      // 空中敵（序盤から出現）
+      const airTypes = ['wasp', 'floater'];
+      if (difficulty > 0.35) airTypes.push('speeder');
+      if (difficulty > 0.55) airTypes.push('bomber');
+
+      // 空中・地上をランダムに選択（空中の割合を高める）
+      const useAir = Math.random() < 0.5 + difficulty * 0.15;
+      const pool   = useAir ? airTypes : groundTypes;
+      const type   = pool[randInt(0, pool.length - 1)];
+
+      // 出現Y座標
+      let spawnY;
+      if (type === 'wasp') {
+        spawnY = GAME_HEIGHT * (0.18 + Math.random() * 0.35);
+      } else if (type === 'floater') {
+        spawnY = GAME_HEIGHT * (0.22 + Math.random() * 0.30);
+      } else if (type === 'speeder') {
+        spawnY = GAME_HEIGHT * (0.12 + Math.random() * 0.40);
+      } else if (type === 'bomber') {
+        spawnY = GAME_HEIGHT * (0.08 + Math.random() * 0.20);
+      } else {
+        spawnY = GROUND_Y - { crawler: 32, tank: 50 }[type];
       }
 
-      this._timer = randInt(700, 1800) * (1 - difficulty * 0.4); // 間隔を大幅短縮
+      // 難易度が上がると2体同時スポーン
+      const spawnCount = (difficulty > 0.4 && Math.random() < 0.35) ? 2 : 1;
+      for (let s = 0; s < spawnCount; s++) {
+        this.enemies.push(new Enemy(GAME_WIDTH + 30 + s * 130, spawnY, type));
+      }
+
+      this._timer = randInt(700, 1800) * (1 - difficulty * 0.4);
     }
 
     // 更新・衝突
@@ -239,11 +509,24 @@ export class EnemyManager {
         // プレイヤー攻撃ヒット
         if (attackHitbox && rectsOverlap(attackHitbox, e.hitbox)) {
           e.takeDamage(player.attackDamage, this.particles);
-          if (e.dead) scoreGain += { crawler: 100, floater: 200, tank: 500 }[e.type] || 100;
+          if (e.dead) scoreGain += { crawler: 100, floater: 200, tank: 500, wasp: 150, bomber: 300, speeder: 200 }[e.type] || 100;
         }
-        // プレイヤーへのダメージ
+        // プレイヤーへの接触ダメージ
         if (rectsOverlap({ x: player.x, y: player.y, w: player.w, h: player.h }, e.hitbox)) {
-          player.takeDamage({ crawler: 20, floater: 15, tank: 35 }[e.type] || 20);
+          player.takeDamage({ crawler: 20, floater: 15, tank: 35, wasp: 18, bomber: 25, speeder: 30 }[e.type] || 20);
+        }
+        // bomber の爆弾との衝突
+        if (e.type === 'bomber') {
+          for (let bi = e.bombs.length - 1; bi >= 0; bi--) {
+            const b  = e.bombs[bi];
+            const pr = { x: player.x + 4, y: player.y + 4, w: player.w - 8, h: player.h - 8 };
+            if (pr.x < b.x + b.r && pr.x + pr.w > b.x - b.r &&
+                pr.y < b.y + b.r && pr.y + pr.h > b.y - b.r) {
+              player.takeDamage(22);
+              this.particles.emitExplosion(b.x, b.y);
+              e.bombs.splice(bi, 1);
+            }
+          }
         }
       }
 
