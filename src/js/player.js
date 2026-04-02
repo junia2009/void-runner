@@ -221,9 +221,9 @@ export class Player {
 
     this._drawCharacter(ctx, this.x, this.y);
 
-    // 斬撃エフェクト
+    // 斬撃エフェクト（ヒットボックスに合わせて描画）
     if (this.slashAlpha > 0) {
-      this._drawSlash(ctx, cx + this.w, cy);
+      this._drawSlash(ctx);
     }
 
     ctx.restore();
@@ -312,22 +312,67 @@ export class Player {
     }
   }
 
-  _drawSlash(ctx, cx, cy) {
+  _drawSlash(ctx) {
+    if (this.slashAlpha <= 0) return;
     ctx.save();
-    ctx.globalAlpha = this.slashAlpha;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth   = 3;
-    ctx.shadowBlur  = 20;
+    ctx.lineCap = 'round';
+
+    // ヒットボックスと完全に同じ座標
+    const hbX = this.x - PLAYER.ATTACK_RANGE_W * 0.1;
+    const hbY = this.y - PLAYER.ATTACK_RANGE_H * 0.2;
+    const hbW = this.w + PLAYER.ATTACK_RANGE_W;
+    const hbH = this.h + PLAYER.ATTACK_RANGE_H * 0.4;
+    const a   = this.slashAlpha;
+
+    // ① 攻撃エリア全体の薄いグロー
+    ctx.globalAlpha = a * 0.18;
+    const areaGrad = ctx.createLinearGradient(hbX, 0, hbX + hbW, 0);
+    areaGrad.addColorStop(0,   'rgba(126, 207, 255, 0.9)');
+    areaGrad.addColorStop(0.7, 'rgba(126, 207, 255, 0.3)');
+    areaGrad.addColorStop(1,   'rgba(126, 207, 255, 0.0)');
+    ctx.fillStyle = areaGrad;
+    ctx.fillRect(hbX, hbY, hbW, hbH);
+
+    ctx.globalAlpha = a;
+    ctx.shadowBlur  = 22;
     ctx.shadowColor = '#7ecfff';
 
-    const len = 55 + this.skills.attackPow * 10;
-    for (let i = 0; i < 3; i++) {
-      const a = this.slashAngle + i * 0.25 - 0.3;
+    // ② メイン斬撃ライン3本（ヒットボックスを斜めに横断）
+    const lines = [
+      { x0: hbX + hbW * 0.05, y0: hbY,              x1: hbX + hbW * 0.96, y1: hbY + hbH * 0.40, color: '#ffffff', lw: 3.5 },
+      { x0: hbX + hbW * 0.05, y0: hbY + hbH * 0.28, x1: hbX + hbW * 0.96, y1: hbY + hbH * 0.72, color: '#aaddff', lw: 2.5 },
+      { x0: hbX + hbW * 0.05, y0: hbY + hbH * 0.58, x1: hbX + hbW * 0.96, y1: hbY + hbH,        color: '#7ecfff', lw: 2.0 },
+    ];
+    for (const l of lines) {
+      ctx.strokeStyle = l.color;
+      ctx.lineWidth   = l.lw * a;
       ctx.beginPath();
-      ctx.moveTo(cx - 5, cy);
-      ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len * 0.5);
+      ctx.moveTo(l.x0, l.y0);
+      ctx.lineTo(l.x1, l.y1);
       ctx.stroke();
     }
+
+    // ③ 先端の衝撃波リング（ヒットボックス右端）
+    ctx.shadowBlur  = 30;
+    ctx.shadowColor = '#7ecfff';
+    ctx.strokeStyle = `rgba(126, 207, 255, ${a})`;
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(
+      hbX + hbW * 0.92, hbY + hbH * 0.5,
+      hbW * 0.06, hbH * 0.44 * a,
+      0, -Math.PI * 0.5, Math.PI * 0.5
+    );
+    ctx.stroke();
+
+    // ④ プレイヤー根元の発光点（剣を振った起点）
+    ctx.shadowBlur  = 20;
+    ctx.shadowColor = '#ffffff';
+    ctx.fillStyle   = `rgba(255, 255, 255, ${a * 0.9})`;
+    ctx.beginPath();
+    ctx.arc(this.x + this.w * 0.8, this.y + this.h * 0.35, 6 * a, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
   }
 }
