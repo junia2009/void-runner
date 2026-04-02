@@ -1,0 +1,102 @@
+/* ===== リセット & ベース ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* ===== キャンバス ===== */
+#gameCanvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== 縦向き警告 ===== */
+#rotate-notice {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000d1a;
+  color: #7ecfff;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+#rotate-notice.visible {
+  display: flex;
+}
+
+.rotate-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.rotate-icon {
+  font-size: 64px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+#rotate-notice p {
+  font-size: clamp(14px, 4vw, 20px);
+  letter-spacing: 0.05em;
+}
+
+/* ===== タッチ操作UI ===== */
+#touch-controls {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  pointer-events: none;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+#touch-controls.visible {
+  display: flex;
+}
+
+.touch-btn {
+  pointer-events: all;
+  width: clamp(64px, 16vw, 96px);
+  height: clamp(64px, 16vw, 96px);
+  border-radius: 50%;
+  border: 2px solid rgba(126, 207, 255, 0.6);
+  background: rgba(0, 30, 60, 0.55);
+  color: #7ecfff;
+  font-size: clamp(11px, 2.5vw, 15px);
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+
+.touch-btn:active {
+  background: rgba(126, 207, 255, 0.25);
+}

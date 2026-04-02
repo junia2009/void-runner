@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>VOID RUNNER</title>
+  <link rel="stylesheet" href="src/css/style.css" />
+</head>
+<body>
+  <!-- 縦向き警告 -->
+  <div id="rotate-notice">
+    <div class="rotate-inner">
+      <div class="rotate-icon">↻</div>
+      <p>横向きにしてプレイしてください</p>
+    </div>
+  </div>
+
+  <!-- メインキャンバス -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- タッチ操作UI（スマホ・タブレット用） -->
+  <div id="touch-controls">
+    <button id="btn-jump" class="touch-btn">JUMP</button>
+    <button id="btn-attack" class="touch-btn">ATK</button>
+  </div>
+
+  <script type="module" src="src/js/main.js"></script>
+</body>
+</html>
