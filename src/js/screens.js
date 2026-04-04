@@ -54,6 +54,12 @@ export function drawTitle(ctx, frame) {
   ctx.fillStyle = '#2a4a6a';
   ctx.fillText('[SPACE / ↑]  Jump   [Z / J]  Attack', W / 2, H * 0.90);
 
+  // バージョン表示
+  ctx.textAlign = 'right';
+  ctx.font      = `${Math.round(11 * scale)}px 'Courier New', monospace`;
+  ctx.fillStyle = '#2a4a6a';
+  ctx.fillText('ver 2.0.0', W - 16 * scale, H - 12 * scale);
+
   ctx.restore();
 }
 
