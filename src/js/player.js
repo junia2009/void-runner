@@ -1,6 +1,6 @@
 // ===== player.js =====
 
-import { GAME_HEIGHT, GRAVITY, GROUND_Y_RATIO, PLAYER, COLORS } from './constants.js';
+import { GAME_HEIGHT, GAME_WIDTH, GRAVITY, GROUND_Y_RATIO, PLAYER, COLORS } from './constants.js';
 import { clamp } from './utils.js';
 
 const STATE = { IDLE: 'idle', RUN: 'run', JUMP: 'jump', FALL: 'fall', ATTACK: 'attack', HURT: 'hurt', DEAD: 'dead' };
@@ -96,11 +96,12 @@ export class Player {
   dash() {
     if (!this.skills.dashUnlock || this.dashCooldown > 0 || this.isDashing) return;
     this.isDashing    = true;
-    this.dashTimer    = 180;
-    this.dashCooldown = 800;
-    this.invincible   = Math.max(this.invincible, 200);
-    this.particles.emit(this.x + this.w / 2, this.y + this.h / 2, 15, {
-      angle: Math.PI, spread: 0.4, speed: 5, life: 20, size: 4,
+    this.dashTimer    = 260;
+    this.dashCooldown = 1400;
+    this.invincible   = Math.max(this.invincible, 280); // ダッシュ中は完全無敵
+    this.vy = 0;
+    this.particles.emit(this.x + this.w, this.y + this.h / 2, 20, {
+      angle: 0, spread: 0.5, speed: 7, life: 18, size: 4,
       color: '#3af', gravity: 0,
     });
   }
@@ -151,9 +152,15 @@ export class Player {
 
     // 物理
     if (this.isDashing) {
-      this.vx = 14;
+      // 前方（右）へ突進しつつ重力を無効化
+      this.x = Math.min(this.x + 13, GAME_WIDTH * 0.70);
       this.vy = 0;
     } else {
+      // ダッシュ後は元の定位置(180)へゆっくり戻す
+      const homeX = 180;
+      if (this.x > homeX) {
+        this.x = Math.max(homeX, this.x - 6);
+      }
       this.vy += GRAVITY;
     }
     this.y += this.vy;
