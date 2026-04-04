@@ -6,6 +6,7 @@ export class Input {
     this.keys = {};
     this._jumpPressed  = false;
     this._attackPressed = false;
+    this._dashPressed  = false;
 
     // キーボード
     window.addEventListener('keydown', (e) => {
@@ -27,6 +28,7 @@ export class Input {
     // タッチボタン（UI要素経由）
     this._bindTouchBtn('btn-jump',   () => { this._jumpPressed   = true; });
     this._bindTouchBtn('btn-attack', () => { this._attackPressed = true; });
+    this._bindTouchBtn('btn-dash',   () => { this._dashPressed   = true; });
   }
 
   _bindTouchBtn(id, cb) {
@@ -49,6 +51,15 @@ export class Input {
   consumeAttack() {
     if (this._attackPressed) {
       this._attackPressed = false;
+      return true;
+    }
+    return false;
+  }
+
+  /** ダッシュ入力を消費 */
+  consumeDash() {
+    if (this._dashPressed) {
+      this._dashPressed = false;
       return true;
     }
     return false;

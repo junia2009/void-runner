@@ -119,6 +119,8 @@ function initGame() {
   world.score = 0;
   // タッチデバイスならボタンを表示
   if (isTouchDevice()) touchControls.classList.add('visible');
+  // ダッシュ解放済みならボタンを表示
+  document.getElementById('btn-dash').style.display = player.skills.dashUnlock ? '' : 'none';
   hud.notify('GO !', '#00ffcc');
 }
 
@@ -244,6 +246,7 @@ function applyShopItem(id) {
       break;
     case 'dashUnlock':
       player.skills.dashUnlock = true;
+      document.getElementById('btn-dash').style.display = '';
       break;
     case 'doubleJump2':
       player.skills._tripleJump = true;
@@ -310,6 +313,7 @@ function loop(timestamp) {
   } else if (gameState === STATE.PLAYING) {
     bg.update(world.scrollSpeed);
     world.update(dt, player);
+    if (input.consumeDash()) player.dash();
     player.update(dt, input);
 
     const scoreGain = enemies.update(dt, world.scrollSpeed, world.distance, player);
