@@ -66,23 +66,36 @@ html, body {
 #touch-controls {
   display: none;
   position: fixed;
-  bottom: 24px;
+  bottom: 20px;
   left: 0;
   width: 100%;
   z-index: 100;
   pointer-events: none;
   justify-content: space-between;
-  padding: 0 32px;
+  align-items: flex-end;
+  padding: 0 28px;
 }
 
 #touch-controls.visible {
   display: flex;
 }
 
+.touch-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.touch-group-right {
+  align-items: center;
+}
+
 .touch-btn {
   pointer-events: all;
-  width: clamp(64px, 16vw, 96px);
-  height: clamp(64px, 16vw, 96px);
+  width: clamp(68px, 17vw, 100px);
+  height: clamp(68px, 17vw, 100px);
   border-radius: 50%;
   border: 2px solid rgba(126, 207, 255, 0.6);
   background: rgba(0, 30, 60, 0.55);
@@ -94,9 +107,23 @@ html, body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.1s;
+  transition: background 0.1s, transform 0.08s;
+}
+
+.touch-btn-sub {
+  width: clamp(52px, 12vw, 72px);
+  height: clamp(52px, 12vw, 72px);
+  font-size: clamp(10px, 2vw, 13px);
+  border-color: rgba(100, 220, 255, 0.4);
+  background: rgba(0, 20, 50, 0.5);
+  color: rgba(126, 207, 255, 0.8);
 }
 
 .touch-btn:active {
-  background: rgba(126, 207, 255, 0.25);
+  background: rgba(126, 207, 255, 0.28);
+  transform: scale(0.93);
+}
+
+.touch-btn-sub:active {
+  background: rgba(100, 220, 255, 0.2);
 }

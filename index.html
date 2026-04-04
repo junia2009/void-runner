@@ -27,9 +27,13 @@
 
   <!-- タッチ操作UI（スマホ・タブレット用） -->
   <div id="touch-controls">
-    <button id="btn-jump" class="touch-btn">JUMP</button>
-    <button id="btn-attack" class="touch-btn">ATK</button>
-    <button id="btn-dash" class="touch-btn" style="display:none">DASH</button>
+    <div class="touch-group">
+      <button id="btn-jump" class="touch-btn">JUMP</button>
+    </div>
+    <div class="touch-group touch-group-right">
+      <button id="btn-dash" class="touch-btn touch-btn-sub" style="display:none">DASH</button>
+      <button id="btn-attack" class="touch-btn">ATK</button>
+    </div>
   </div>
 
   <script type="module" src="src/js/main.js"></script>
